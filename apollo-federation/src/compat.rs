@@ -53,19 +53,8 @@ fn standardize_deprecated(directive: &mut Directive) {
     }
 }
 
-/// Retain only semantic directives in a directive list from the high-level schema representation.
+/// Retain only semantic directives in a directive list.
 fn retain_semantic_directives(directives: &mut schema::DirectiveList) {
-    directives
-        .0
-        .retain(|directive| is_semantic_directive_application(directive));
-
-    for directive in directives {
-        standardize_deprecated(directive.make_mut());
-    }
-}
-
-/// Retain only semantic directives in a directive list from the AST-level schema representation.
-fn retain_semantic_directives_ast(directives: &mut apollo_compiler::ast::DirectiveList) {
     directives
         .0
         .retain(|directive| is_semantic_directive_application(directive));
@@ -88,10 +77,10 @@ pub(crate) fn remove_non_semantic_directives(schema: &mut Schema) {
                 retain_semantic_directives(&mut object.directives);
                 for field in object.fields.values_mut() {
                     let field = field.make_mut();
-                    retain_semantic_directives_ast(&mut field.directives);
+                    retain_semantic_directives(&mut field.directives);
                     for arg in &mut field.arguments {
                         let arg = arg.make_mut();
-                        retain_semantic_directives_ast(&mut arg.directives);
+                        retain_semantic_directives(&mut arg.directives);
                     }
                 }
             }
@@ -100,10 +89,10 @@ pub(crate) fn remove_non_semantic_directives(schema: &mut Schema) {
                 retain_semantic_directives(&mut interface.directives);
                 for field in interface.fields.values_mut() {
                     let field = field.make_mut();
-                    retain_semantic_directives_ast(&mut field.directives);
+                    retain_semantic_directives(&mut field.directives);
                     for arg in &mut field.arguments {
                         let arg = arg.make_mut();
-                        retain_semantic_directives_ast(&mut arg.directives);
+                        retain_semantic_directives(&mut arg.directives);
                     }
                 }
             }
@@ -112,7 +101,7 @@ pub(crate) fn remove_non_semantic_directives(schema: &mut Schema) {
                 retain_semantic_directives(&mut input_object.directives);
                 for field in input_object.fields.values_mut() {
                     let field = field.make_mut();
-                    retain_semantic_directives_ast(&mut field.directives);
+                    retain_semantic_directives(&mut field.directives);
                 }
             }
             ExtendedType::Union(union_) => {
@@ -128,7 +117,7 @@ pub(crate) fn remove_non_semantic_directives(schema: &mut Schema) {
                 retain_semantic_directives(&mut enum_.directives);
                 for value in enum_.values.values_mut() {
                     let value = value.make_mut();
-                    retain_semantic_directives_ast(&mut value.directives);
+                    retain_semantic_directives(&mut value.directives);
                 }
             }
         }
@@ -138,7 +127,7 @@ pub(crate) fn remove_non_semantic_directives(schema: &mut Schema) {
         let directive = directive.make_mut();
         for arg in &mut directive.arguments {
             let arg = arg.make_mut();
-            retain_semantic_directives_ast(&mut arg.directives);
+            retain_semantic_directives(&mut arg.directives);
         }
     }
 }
@@ -416,7 +405,7 @@ pub fn coerce_and_validate_schema_values(schema: &mut Schema) -> Result<(), Fede
         match ty {
             ExtendedType::Object(object) => {
                 let object = object.make_mut();
-                coerce_directive_application_values_schema(
+                coerce_directive_application_values_in_schema(
                     &directive_definitions,
                     &types,
                     &mut object.directives,
@@ -435,7 +424,7 @@ pub fn coerce_and_validate_schema_values(schema: &mut Schema) -> Result<(), Fede
                         ),
                         &mut errors,
                     );
-                    coerce_directive_application_values_ast(
+                    coerce_directive_application_values_in_schema(
                         &directive_definitions,
                         &types,
                         &mut field.directives,
@@ -449,7 +438,7 @@ pub fn coerce_and_validate_schema_values(schema: &mut Schema) -> Result<(), Fede
             }
             ExtendedType::Interface(interface) => {
                 let interface = interface.make_mut();
-                coerce_directive_application_values_schema(
+                coerce_directive_application_values_in_schema(
                     &directive_definitions,
                     &types,
                     &mut interface.directives,
@@ -468,7 +457,7 @@ pub fn coerce_and_validate_schema_values(schema: &mut Schema) -> Result<(), Fede
                         ),
                         &mut errors,
                     );
-                    coerce_directive_application_values_ast(
+                    coerce_directive_application_values_in_schema(
                         &directive_definitions,
                         &types,
                         &mut field.directives,
@@ -482,7 +471,7 @@ pub fn coerce_and_validate_schema_values(schema: &mut Schema) -> Result<(), Fede
             }
             ExtendedType::InputObject(input_object) => {
                 let input_object = input_object.make_mut();
-                coerce_directive_application_values_schema(
+                coerce_directive_application_values_in_schema(
                     &directive_definitions,
                     &types,
                     &mut input_object.directives,
@@ -494,7 +483,7 @@ pub fn coerce_and_validate_schema_values(schema: &mut Schema) -> Result<(), Fede
                         field_name: field.name.clone(),
                     }
                     .to_string();
-                    coerce_directive_application_values_ast(
+                    coerce_directive_application_values_in_schema(
                         &directive_definitions,
                         &types,
                         &mut field.directives,
@@ -525,7 +514,7 @@ pub fn coerce_and_validate_schema_values(schema: &mut Schema) -> Result<(), Fede
             }
             ExtendedType::Union(union_) => {
                 let union_ = union_.make_mut();
-                coerce_directive_application_values_schema(
+                coerce_directive_application_values_in_schema(
                     &directive_definitions,
                     &types,
                     &mut union_.directives,
@@ -533,7 +522,7 @@ pub fn coerce_and_validate_schema_values(schema: &mut Schema) -> Result<(), Fede
             }
             ExtendedType::Scalar(scalar) => {
                 let scalar = scalar.make_mut();
-                coerce_directive_application_values_schema(
+                coerce_directive_application_values_in_schema(
                     &directive_definitions,
                     &types,
                     &mut scalar.directives,
@@ -541,14 +530,14 @@ pub fn coerce_and_validate_schema_values(schema: &mut Schema) -> Result<(), Fede
             }
             ExtendedType::Enum(enum_) => {
                 let enum_ = enum_.make_mut();
-                coerce_directive_application_values_schema(
+                coerce_directive_application_values_in_schema(
                     &directive_definitions,
                     &types,
                     &mut enum_.directives,
                 );
                 for value in enum_.values.values_mut() {
                     let value = value.make_mut();
-                    coerce_directive_application_values_ast(
+                    coerce_directive_application_values_in_schema(
                         &directive_definitions,
                         &types,
                         &mut value.directives,
@@ -611,38 +600,10 @@ fn coerce_directive_application_values(
     }
 }
 
-fn coerce_directive_application_values_schema(
+fn coerce_directive_application_values_in_schema(
     directive_definitions: &IndexMap<Name, Node<DirectiveDefinition>>,
     type_definitions: &IndexMap<Name, ExtendedType>,
     directives: &mut schema::DirectiveList,
-) {
-    for directive in directives {
-        let Some(definition) = directive_definitions.get(&directive.name) else {
-            continue;
-        };
-        let directive = directive.make_mut();
-        for arg in &mut directive.arguments {
-            let Some(definition) = definition.argument_by_name(&arg.name) else {
-                continue;
-            };
-            let arg = arg.make_mut();
-            // Note that GraphQL spec validation will catch invalidities in directive application
-            // argument values but with nicer error messaging, so if coerce_value() fails validation
-            // here we just ignore it.
-            _ = coerce_value(
-                type_definitions,
-                &mut arg.value,
-                &definition.ty,
-                &Default::default(),
-            );
-        }
-    }
-}
-
-fn coerce_directive_application_values_ast(
-    directive_definitions: &IndexMap<Name, Node<DirectiveDefinition>>,
-    type_definitions: &IndexMap<Name, ExtendedType>,
-    directives: &mut apollo_compiler::ast::DirectiveList,
 ) {
     for directive in directives {
         let Some(definition) = directive_definitions.get(&directive.name) else {
@@ -679,7 +640,7 @@ fn coerce_argument_directive_application_values(
 ) {
     for arg in arguments {
         let arg = arg.make_mut();
-        coerce_directive_application_values_ast(
+        coerce_directive_application_values_in_schema(
             directive_definitions,
             type_definitions,
             &mut arg.directives,

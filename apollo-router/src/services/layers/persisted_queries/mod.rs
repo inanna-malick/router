@@ -226,7 +226,6 @@ impl PersistedQueryExpander {
     /// This functions similarly to a checkpoint service, short-circuiting the pipeline on error
     /// (using an `Err()` return value).
     /// The user of this function is responsible for propagating short-circuiting.
-    #[expect(clippy::result_large_err, reason = "err is smaller than ok")]
     pub(crate) async fn supergraph_request_with_analyzed_query(
         &self,
         request: SupergraphRequest,

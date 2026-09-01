@@ -297,6 +297,7 @@ where
         + std::marker::Send
         + 'static,
 {
+    #[allow(clippy::result_large_err)]
     pub(crate) async fn new(
         mut stream: S,
         id: String,
@@ -359,6 +360,7 @@ where
         })
     }
 
+    #[allow(clippy::result_large_err)]
     pub(crate) async fn into_subscription(
         mut self,
         request: graphql::Request,
